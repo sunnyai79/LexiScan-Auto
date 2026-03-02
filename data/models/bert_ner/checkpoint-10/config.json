@@ -1,0 +1,49 @@
+{
+  "activation": "gelu",
+  "architectures": [
+    "DistilBertForTokenClassification"
+  ],
+  "attention_dropout": 0.1,
+  "bos_token_id": null,
+  "dim": 768,
+  "dropout": 0.1,
+  "dtype": "float32",
+  "eos_token_id": null,
+  "hidden_dim": 3072,
+  "id2label": {
+    "0": "O",
+    "1": "B-DATE",
+    "2": "B-PARTY",
+    "3": "B-AMOUNT",
+    "4": "B-TERMINATION_CLAUSE",
+    "5": "I-DATE",
+    "6": "I-PARTY",
+    "7": "I-AMOUNT",
+    "8": "I-TERMINATION_CLAUSE"
+  },
+  "initializer_range": 0.02,
+  "label2id": {
+    "B-AMOUNT": 3,
+    "B-DATE": 1,
+    "B-PARTY": 2,
+    "B-TERMINATION_CLAUSE": 4,
+    "I-AMOUNT": 7,
+    "I-DATE": 5,
+    "I-PARTY": 6,
+    "I-TERMINATION_CLAUSE": 8,
+    "O": 0
+  },
+  "max_position_embeddings": 512,
+  "model_type": "distilbert",
+  "n_heads": 12,
+  "n_layers": 6,
+  "pad_token_id": 0,
+  "qa_dropout": 0.1,
+  "seq_classif_dropout": 0.2,
+  "sinusoidal_pos_embds": false,
+  "tie_weights_": true,
+  "tie_word_embeddings": true,
+  "transformers_version": "5.2.0",
+  "use_cache": false,
+  "vocab_size": 30522
+}
