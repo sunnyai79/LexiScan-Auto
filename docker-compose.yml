@@ -1,0 +1,76 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────
+# LexiScan Auto — Docker Compose
+# Week 4: Production Deployment
+# ─────────────────────────────────────────────
+#
+# Services:
+#   - api:    FastAPI NER backend — serves HTML UI + REST API (port 8000)
+#   - redis:  Result caching (port 6379)
+#
+# Frontend is served directly from FastAPI at http://localhost:8000/
+# API docs available at http://localhost:8000/docs
+#
+# Usage:
+#   docker-compose up --build
+
+services:
+  # ── NER API + HTML Frontend ──────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lexiscan-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=info
+      - MAX_FILE_SIZE_MB=50
+      - WORKERS=2
+    volumes:
+      - ./backend/models:/app/models:ro        # Mount trained NER models
+      - ./frontend/index.html:/app/frontend/index.html:ro  # Live-reload HTML
+      - api_logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - lexiscan-net
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.5"
+
+  # ── Redis Cache ───────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: lexiscan-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lexiscan-net
+
+volumes:
+  redis_data:
+  api_logs:
+
+networks:
+  lexiscan-net:
+    driver: bridge
