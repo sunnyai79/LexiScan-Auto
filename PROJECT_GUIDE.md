@@ -9,6 +9,14 @@ lexiscan/                              ← Root project folder
 │
 ├── docker-compose.yml                 ← Runs the whole stack with one command
 │
+├── data/                              ← Input files
+│   ├── lexiscan_test_contract.pdf
+│   ├── sample_contract_page1.png
+│   ├── sample_contract_page2.png
+│   ├── sample_contract_page3.png
+│   ├── sample_contract_page4.png
+│   └── sample_contract_page5.png             
+│
 ├── frontend/
 │   └── index.html                     ← Entire UI (HTML + CSS + JS, single file)
 │
