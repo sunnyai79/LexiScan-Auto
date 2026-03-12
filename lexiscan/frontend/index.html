@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LexiScan Auto — Legal Contract Entity Extractor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & Base ──────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #F5F4F0;
+      --surface:    #FFFFFF;
+      --border:     #E2E0DA;
+      --border-2:   #CCCAC2;
+      --text:       #1A1917;
+      --text-2:     #5C5A55;
+      --text-3:     #9E9B94;
+      --accent:     #1A56DB;
+      --accent-bg:  #EEF3FD;
+
+      --date-color:   #B45309;
+      --date-bg:      #FEF3C7;
+      --date-border:  #FCD34D;
+
+      --party-color:  #065F46;
+      --party-bg:     #D1FAE5;
+      --party-border: #6EE7B7;
+
+      --amount-color: #1D4ED8;
+      --amount-bg:    #DBEAFE;
+      --amount-border:#93C5FD;
+
+      --term-color:   #9F1239;
+      --term-bg:      #FFE4E6;
+      --term-border:  #FCA5A5;
+
+      --radius:  8px;
+      --radius-lg: 12px;
+      --shadow:  0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    /* ── Layout ────────────────────────────────── */
+    .page-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    /* ── Header ────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 40px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--text);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .logo-name {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .logo-name span { color: var(--accent); }
+
+    .logo-sub {
+      font-size: 11px;
+      color: var(--text-3);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-family: 'IBM Plex Mono', monospace;
+      margin-top: 1px;
+    }
+
+    .header-badges {
+      display: flex;
+      gap: 8px;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+    }
+
+    .badge.green {
+      background: #D1FAE5;
+      border-color: #6EE7B7;
+      color: var(--party-color);
+    }
+
+    /* ── Main columns ──────────────────────────── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    @media (max-width: 800px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Card ──────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    .card-body { padding: 20px; }
+
+    /* ── Tabs ──────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 3px;
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 7px 12px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-2);
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: -0.01em;
+    }
+
+    .tab-btn.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+
+    /* ── Drop zone ─────────────────────────────── */
+    .drop-zone {
+      border: 1.5px dashed var(--border-2);
+      border-radius: var(--radius);
+      padding: 36px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: var(--bg);
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: var(--accent);
+      background: var(--accent-bg);
+    }
+
+    .drop-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin: 0 auto 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .drop-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .drop-sub {
+      font-size: 12px;
+      color: var(--text-3);
+    }
+
+    /* ── Text input panel ──────────────────────── */
+    .text-panel { display: none; }
+    .text-panel.active { display: block; }
+    .upload-panel.hidden { display: none; }
+
+    textarea {
+      width: 100%;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11.5px;
+      line-height: 1.7;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    textarea:focus { border-color: var(--accent); }
+
+    /* ── Buttons ───────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: -0.01em;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      width: 100%;
+      margin-top: 12px;
+    }
+
+    .btn-primary:hover { background: #1648C7; }
+    .btn-primary:disabled { background: #93A5C8; cursor: not-allowed; }
+
+    .btn-ghost {
+      background: var(--bg);
+      color: var(--text-2);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      padding: 6px 12px;
+    }
+
+    .btn-ghost:hover { background: var(--surface); color: var(--text); }
+
+    /* ── Entity legend ─────────────────────────── */
+    .legend {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .legend-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .legend-count {
+      font-size: 11px;
+      color: var(--text-3);
+      font-family: 'IBM Plex Mono', monospace;
+      margin-left: auto;
+    }
+
+    /* ── Results panel ─────────────────────────── */
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .results-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .results-filename {
+      font-size: 11px;
+      color: var(--text-3);
+      font-family: 'IBM Plex Mono', monospace;
+      margin-top: 2px;
+    }
+
+    /* ── Stats row ─────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat-cell {
+      background: var(--surface);
+      padding: 14px 16px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: -0.02em;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 2px;
+    }
+
+    /* ── Filter tabs ───────────────────────────── */
+    .filter-bar {
+      display: flex;
+      gap: 6px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .filter-chip {
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-2);
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .filter-chip:hover { border-color: var(--border-2); color: var(--text); }
+
+    .filter-chip.active-all {
+      background: var(--text);
+      color: #fff;
+      border-color: var(--text);
+    }
+
+    .filter-chip.active-DATE   { background: var(--date-bg);   color: var(--date-color);   border-color: var(--date-border); }
+    .filter-chip.active-PARTY  { background: var(--party-bg);  color: var(--party-color);  border-color: var(--party-border); }
+    .filter-chip.active-AMOUNT { background: var(--amount-bg); color: var(--amount-color); border-color: var(--amount-border); }
+    .filter-chip.active-TERMINATION_CLAUSE { background: var(--term-bg); color: var(--term-color); border-color: var(--term-border); }
+
+    /* ── Entity list ───────────────────────────── */
+    .entity-list {
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .entity-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      transition: all 0.15s;
+      animation: fadeUp 0.25s ease both;
+    }
+
+    .entity-row:hover { background: var(--bg); }
+
+    .entity-type-badge {
+      font-size: 10px;
+      font-weight: 700;
+      font-family: 'IBM Plex Mono', monospace;
+      letter-spacing: 0.06em;
+      padding: 3px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      margin-top: 1px;
+      white-space: nowrap;
+    }
+
+    .entity-row.DATE   .entity-type-badge { background: var(--date-bg);   color: var(--date-color);   border: 1px solid var(--date-border); }
+    .entity-row.PARTY  .entity-type-badge { background: var(--party-bg);  color: var(--party-color);  border: 1px solid var(--party-border); }
+    .entity-row.AMOUNT .entity-type-badge { background: var(--amount-bg); color: var(--amount-color); border: 1px solid var(--amount-border); }
+    .entity-row.TERMINATION_CLAUSE .entity-type-badge { background: var(--term-bg); color: var(--term-color); border: 1px solid var(--term-border); }
+
+    .entity-content { flex: 1; min-width: 0; }
+
+    .entity-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .entity-normalized {
+      font-size: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--text-3);
+      margin-top: 2px;
+    }
+
+    .entity-context {
+      font-size: 11px;
+      color: var(--text-3);
+      margin-top: 4px;
+      padding: 6px 10px;
+      background: var(--bg);
+      border-radius: 5px;
+      border-left: 2px solid var(--border-2);
+      font-style: italic;
+      line-height: 1.5;
+    }
+
+    .entity-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .confidence-bar {
+      width: 48px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .confidence-fill {
+      height: 100%;
+      background: #10B981;
+      border-radius: 2px;
+      transition: width 0.4s ease;
+    }
+
+    .confidence-fill.medium { background: #F59E0B; }
+    .confidence-fill.low    { background: #EF4444; }
+
+    .confidence-pct {
+      font-size: 10px;
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--text-3);
+      width: 28px;
+      text-align: right;
+    }
+
+    .valid-icon {
+      font-size: 12px;
+    }
+
+    /* ── OCR notice ────────────────────────────── */
+    .ocr-notice {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: #EFF6FF;
+      border-bottom: 1px solid #BFDBFE;
+      font-size: 12px;
+      color: #1D4ED8;
+    }
+
+    /* ── Raw text preview ──────────────────────── */
+    .raw-preview {
+      margin: 0 20px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .raw-preview summary {
+      font-size: 11px;
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--text-3);
+      padding: 8px 12px;
+      cursor: pointer;
+      background: var(--bg);
+      border-radius: var(--radius);
+      user-select: none;
+      letter-spacing: 0.04em;
+    }
+
+    .raw-preview[open] summary { border-radius: var(--radius) var(--radius) 0 0; }
+
+    .raw-preview pre {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--text-2);
+      padding: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.7;
+      max-height: 180px;
+      overflow-y: auto;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Empty state ───────────────────────────── */
+    .empty-state {
+      padding: 60px 24px;
+      text-align: center;
+    }
+
+    .empty-icon {
+      font-size: 36px;
+      margin-bottom: 14px;
+      display: block;
+      opacity: 0.25;
+    }
+
+    .empty-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .empty-sub {
+      font-size: 13px;
+      color: var(--text-3);
+      max-width: 280px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ── Loading state ─────────────────────────── */
+    .loader-wrap {
+      padding: 60px 24px;
+      text-align: center;
+      display: none;
+    }
+
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 2.5px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 14px;
+    }
+
+    .loader-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .loader-steps {
+      font-size: 12px;
+      color: var(--text-3);
+      margin-top: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* ── Error state ───────────────────────────── */
+    .error-box {
+      margin: 16px 20px;
+      padding: 12px 14px;
+      background: #FFF1F2;
+      border: 1px solid #FECDD3;
+      border-radius: var(--radius);
+      font-size: 12px;
+      color: #9F1239;
+      display: none;
+    }
+
+    /* ── Animations ────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⚖</div>
+      <div>
+        <div class="logo-name">Lexi<span>Scan</span> Auto</div>
+        <div class="logo-sub">Legal Contract Intelligence</div>
+      </div>
+    </div>
+    <div class="header-badges">
+      <span class="badge">BERT NER · F1 0.912</span>
+      <span class="badge">OCR + NLP Pipeline</span>
+      <span class="badge green">● API Online</span>
+    </div>
+  </header>
+
+  <!-- ── Two-column layout ── -->
+  <div class="main-grid">
+
+    <!-- ── LEFT: Input panel ── -->
+    <div style="display:flex; flex-direction:column; gap:20px;">
+
+      <!-- Upload / Text card -->
+      <div class="card">
+        <div class="card-header">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1v9M4 6l4 4 4-4M2 12h12v2H2z" stroke="#1A1917" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="card-title">Upload Contract</span>
+        </div>
+        <div class="card-body">
+
+          <!-- Tabs -->
+          <div class="tabs">
+            <button class="tab-btn active" id="tabPdf"   onclick="switchTab('pdf')">PDF Upload</button>
+            <button class="tab-btn"        id="tabImage" onclick="switchTab('image')">Image Upload</button>
+            <button class="tab-btn"        id="tabText"  onclick="switchTab('text')">Paste Text</button>
+          </div>
+
+          <!-- PDF Upload panel -->
+          <div id="uploadPanel">
+            <div
+              class="drop-zone"
+              id="dropZone"
+              onclick="document.getElementById('fileInput').click()"
+              ondragover="handleDragOver(event)"
+              ondragleave="handleDragLeave(event)"
+              ondrop="handleDrop(event)"
+            >
+              <div class="drop-icon">📄</div>
+              <div class="drop-title">Drop PDF here or click to browse</div>
+              <div class="drop-sub">Supports native digital &amp; scanned PDFs</div>
+            </div>
+            <input type="file" id="fileInput" accept=".pdf" style="display:none" onchange="handleFileChange(event)" />
+            <div id="selectedFile" style="display:none; margin-top:10px; padding:10px 12px; background:var(--accent-bg); border:1px solid #BFDBFE; border-radius:var(--radius); font-size:12px; color:var(--accent); display:flex; align-items:center; gap:8px;">
+              <span>📄</span>
+              <span id="selectedFileName"></span>
+              <button class="btn-ghost" style="margin-left:auto; padding:3px 8px; font-size:11px;" onclick="clearFile()">✕</button>
+            </div>
+            <button class="btn btn-primary" id="uploadBtn" onclick="submitPdf()" disabled>
+              Extract Entities
+            </button>
+          </div>
+
+          <!-- Text panel -->
+          <div id="textPanel" class="text-panel">
+            <textarea id="contractText" rows="12" placeholder="Paste contract text here…"></textarea>
+            <button class="btn btn-primary" id="textBtn" onclick="submitText()">
+              Extract Entities
+            </button>
+          </div>
+
+          <!-- Image Upload panel -->
+          <div id="imagePanel" style="display:none;">
+            <div
+              class="drop-zone"
+              id="imageDropZone"
+              onclick="document.getElementById('imageInput').click()"
+              ondragover="handleImageDragOver(event)"
+              ondragleave="handleImageDragLeave(event)"
+              ondrop="handleImageDrop(event)"
+            >
+              <div class="drop-icon">🖼️</div>
+              <div class="drop-title">Drop image here or click to browse</div>
+              <div class="drop-sub">Supports JPG, PNG, TIFF, BMP, WEBP</div>
+            </div>
+            <input type="file" id="imageInput"
+              accept=".jpg,.jpeg,.png,.tiff,.tif,.bmp,.webp"
+              style="display:none"
+              onchange="handleImageChange(event)" />
+            <div id="selectedImage" style="display:none; margin-top:10px; padding:10px 12px;
+              background:var(--accent-bg); border:1px solid #BFDBFE; border-radius:var(--radius);
+              font-size:12px; color:var(--accent); align-items:center; gap:8px;">
+              <span>🖼️</span>
+              <span id="selectedImageName"></span>
+              <button class="btn-ghost" style="margin-left:auto; padding:3px 8px; font-size:11px;"
+                onclick="clearImage()">✕</button>
+            </div>
+            <button class="btn btn-primary" id="imageBtn" onclick="submitImage()" disabled>
+              Extract Entities from Image
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Entity legend card -->
+      <div class="card">
+        <div class="card-header">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" stroke="#1A1917" stroke-width="1.4"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="#1A1917" stroke-width="1.4"/><rect x="1" y="9" width="6" height="6" rx="1" stroke="#1A1917" stroke-width="1.4"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="#1A1917" stroke-width="1.4"/></svg>
+          <span class="card-title">Entity Types</span>
+        </div>
+        <div class="card-body" style="padding-top:12px; padding-bottom:12px;">
+          <div class="legend">
+            <div class="legend-item">
+              <div class="legend-dot" style="background:var(--date-color);"></div>
+              <div>
+                <div class="legend-label">Dates</div>
+                <div style="font-size:10px; color:var(--text-3);">→ ISO 8601</div>
+              </div>
+              <span class="legend-count" id="count-DATE">0</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:var(--party-color);"></div>
+              <div>
+                <div class="legend-label">Parties</div>
+                <div style="font-size:10px; color:var(--text-3);">Organizations</div>
+              </div>
+              <span class="legend-count" id="count-PARTY">0</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:var(--amount-color);"></div>
+              <div>
+                <div class="legend-label">Amounts</div>
+                <div style="font-size:10px; color:var(--text-3);">Financial values</div>
+              </div>
+              <span class="legend-count" id="count-AMOUNT">0</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:var(--term-color);"></div>
+              <div>
+                <div class="legend-label">Termination</div>
+                <div style="font-size:10px; color:var(--text-3);">Exit clauses</div>
+              </div>
+              <span class="legend-count" id="count-TERMINATION_CLAUSE">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /left -->
+
+    <!-- ── RIGHT: Results panel ── -->
+    <div class="card" style="min-height:520px;">
+
+      <!-- Empty state -->
+      <div class="empty-state" id="emptyState">
+        <span class="empty-icon">📋</span>
+        <div class="empty-title">No document processed yet</div>
+        <div class="empty-sub">Upload a PDF or paste contract text on the left to extract entities.</div>
+      </div>
+
+      <!-- Loader -->
+      <div class="loader-wrap" id="loaderState">
+        <div class="spinner"></div>
+        <div class="loader-title">Processing document…</div>
+        <div class="loader-steps" id="loaderStep">Running OCR pipeline…</div>
+      </div>
+
+      <!-- Results (hidden until loaded) -->
+      <div id="resultsState" style="display:none;">
+
+        <div class="results-header">
+          <div>
+            <div class="results-title" id="resultsTitle">Extraction Results</div>
+            <div class="results-filename" id="resultsFilename"></div>
+          </div>
+          <button class="btn btn-ghost" onclick="resetResults()">← New Document</button>
+        </div>
+
+        <!-- Stats row -->
+        <div class="stats-row">
+          <div class="stat-cell">
+            <div class="stat-value" id="statEntities">0</div>
+            <div class="stat-label">Entities</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-value" id="statPages">—</div>
+            <div class="stat-label">Pages</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-value" id="statWords">—</div>
+            <div class="stat-label">Words</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-value" id="statTime">—</div>
+            <div class="stat-label">ms</div>
+          </div>
+        </div>
+
+        <!-- OCR notice -->
+        <div class="ocr-notice" id="ocrNotice" style="display:none;">
+          🔍 <strong>OCR Applied</strong> — scanned document converted via Tesseract before NER
+        </div>
+
+        <!-- Error box -->
+        <div class="error-box" id="errorBox"></div>
+
+        <!-- Filter bar -->
+        <div class="filter-bar">
+          <button class="filter-chip active-all" id="chip-ALL"   onclick="filterEntities('ALL')">All</button>
+          <button class="filter-chip" id="chip-DATE"             onclick="filterEntities('DATE')">Dates</button>
+          <button class="filter-chip" id="chip-PARTY"            onclick="filterEntities('PARTY')">Parties</button>
+          <button class="filter-chip" id="chip-AMOUNT"           onclick="filterEntities('AMOUNT')">Amounts</button>
+          <button class="filter-chip" id="chip-TERMINATION_CLAUSE" onclick="filterEntities('TERMINATION_CLAUSE')">Termination</button>
+        </div>
+
+        <!-- Entity list -->
+        <div class="entity-list" id="entityList"></div>
+
+        <!-- Raw text preview -->
+        <details class="raw-preview" id="rawPreview" style="display:none;">
+          <summary>RAW TEXT PREVIEW</summary>
+          <pre id="rawText"></pre>
+        </details>
+
+      </div><!-- /resultsState -->
+
+    </div><!-- /right card -->
+
+  </div><!-- /main-grid -->
+
+</div><!-- /page-wrap -->
+
+<script>
+  const API = 'http://localhost:8000/api/v1';
+  let allEntities = [];
+  let activeFilter = 'ALL';
+  let selectedFile = null;
+
+  const LABELS = {
+    DATE:               'DATE',
+    PARTY:              'PARTY',
+    AMOUNT:             'AMOUNT',
+    TERMINATION_CLAUSE: 'TERM',
+  };
+
+  /* ── Tabs ─────────────────────────────────── */
+  function switchTab(tab) {
+    document.getElementById('tabPdf').classList.toggle('active',   tab === 'pdf');
+    document.getElementById('tabImage').classList.toggle('active', tab === 'image');
+    document.getElementById('tabText').classList.toggle('active',  tab === 'text');
+
+    document.getElementById('uploadPanel').style.display  = tab === 'pdf'   ? 'block' : 'none';
+    document.getElementById('imagePanel').style.display   = tab === 'image' ? 'block' : 'none';
+    document.getElementById('textPanel').classList.toggle('active', tab === 'text');
+  }
+
+  /* ── File handling ────────────────────────── */
+  function handleDragOver(e) {
+    e.preventDefault();
+    document.getElementById('dropZone').classList.add('dragover');
+  }
+
+  function handleDragLeave(e) {
+    document.getElementById('dropZone').classList.remove('dragover');
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('dropZone').classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') setFile(file);
+  }
+
+  function handleFileChange(e) {
+    if (e.target.files[0]) setFile(e.target.files[0]);
+  }
+
+  function setFile(file) {
+    selectedFile = file;
+    document.getElementById('selectedFileName').textContent = file.name;
+    document.getElementById('selectedFile').style.display = 'flex';
+    document.getElementById('uploadBtn').disabled = false;
+  }
+
+  function clearFile() {
+    selectedFile = null;
+    document.getElementById('fileInput').value = '';
+    document.getElementById('selectedFile').style.display = 'none';
+    document.getElementById('uploadBtn').disabled = true;
+  }
+
+  /* ── Image file handling ──────────────────── */
+  let selectedImage = null;
+
+  function handleImageDragOver(e) {
+    e.preventDefault();
+    document.getElementById('imageDropZone').classList.add('dragover');
+  }
+
+  function handleImageDragLeave(e) {
+    document.getElementById('imageDropZone').classList.remove('dragover');
+  }
+
+  function handleImageDrop(e) {
+    e.preventDefault();
+    document.getElementById('imageDropZone').classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const allowed = ['.jpg','.jpeg','.png','.tiff','.tif','.bmp','.webp'];
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    if (allowed.includes(ext)) setImage(file);
+    else alert('Unsupported format. Please upload JPG, PNG, TIFF, BMP, or WEBP.');
+  }
+
+  function handleImageChange(e) {
+    if (e.target.files[0]) setImage(e.target.files[0]);
+  }
+
+  function setImage(file) {
+    selectedImage = file;
+    document.getElementById('selectedImageName').textContent = file.name;
+    document.getElementById('selectedImage').style.display = 'flex';
+    document.getElementById('imageBtn').disabled = false;
+  }
+
+  function clearImage() {
+    selectedImage = null;
+    document.getElementById('imageInput').value = '';
+    document.getElementById('selectedImage').style.display = 'none';
+    document.getElementById('imageBtn').disabled = true;
+  }
+
+  async function submitImage() {
+    if (!selectedImage) return;
+    showLoader();
+    try {
+      const form = new FormData();
+      form.append('file', selectedImage);
+      stepLoader('Running OCR on image…');
+      const res = await fetch(`${API}/extract/image`, { method: 'POST', body: form });
+      await handleResponse(res, selectedImage.name);
+    } catch (err) {
+      showError(err.message);
+    }
+  }
+
+  /* ── API calls ────────────────────────────── */
+  async function submitPdf() {
+    if (!selectedFile) return;
+    showLoader();
+    try {
+      const form = new FormData();
+      form.append('file', selectedFile);
+      stepLoader('Running OCR on PDF…');
+      const res = await fetch(`${API}/extract/pdf`, { method: 'POST', body: form });
+      await handleResponse(res, selectedFile.name);
+    } catch (err) {
+      showError(err.message);
+    }
+  }
+
+  async function submitText() {
+    const text = document.getElementById('contractText').value.trim();
+    if (!text) return;
+    showLoader();
+    stepLoader('Tokenizing contract text…');
+    try {
+      const res = await fetch(`${API}/extract/text`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      await handleResponse(res, 'text_input');
+    } catch (err) {
+      showError(err.message);
+    }
+  }
+
+  async function handleResponse(res, filename) {
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    renderResults(data, filename);
+  }
+
+  /* ── Loader ───────────────────────────────── */
+  function showLoader() {
+    document.getElementById('emptyState').style.display  = 'none';
+    document.getElementById('resultsState').style.display = 'none';
+    document.getElementById('loaderState').style.display  = 'block';
+  }
+
+  function stepLoader(msg) {
+    document.getElementById('loaderStep').textContent = msg;
+  }
+
+  /* ── Render results ───────────────────────── */
+  function renderResults(data, filename) {
+    allEntities = data.entities || [];
+    activeFilter = 'ALL';
+
+    // Update stats
+    document.getElementById('statEntities').textContent = allEntities.length;
+    document.getElementById('statPages').textContent    = data.metadata?.page_count ?? '—';
+    document.getElementById('statWords').textContent    = (data.metadata?.word_count ?? 0).toLocaleString();
+    document.getElementById('statTime').textContent     = data.metadata?.processing_time_ms ?? '—';
+
+    document.getElementById('resultsTitle').textContent   = 'Extraction Results';
+    document.getElementById('resultsFilename').textContent = filename;
+
+    // OCR notice
+    document.getElementById('ocrNotice').style.display = data.metadata?.ocr_applied ? 'flex' : 'none';
+
+    // Legend counts
+    ['DATE','PARTY','AMOUNT','TERMINATION_CLAUSE'].forEach(type => {
+      document.getElementById(`count-${type}`).textContent =
+        allEntities.filter(e => e.entity_type === type).length;
+    });
+
+    // Raw text preview
+    if (data.raw_text_preview) {
+      document.getElementById('rawText').textContent = data.raw_text_preview;
+      document.getElementById('rawPreview').style.display = 'block';
+    }
+
+    // Show results
+    document.getElementById('loaderState').style.display  = 'none';
+    document.getElementById('resultsState').style.display = 'block';
+
+    // Reset filter chips
+    updateFilterChips('ALL');
+    renderEntityList(allEntities);
+  }
+
+  /* ── Entity list rendering ────────────────── */
+  function filterEntities(type) {
+    activeFilter = type;
+    updateFilterChips(type);
+    const filtered = type === 'ALL' ? allEntities : allEntities.filter(e => e.entity_type === type);
+    renderEntityList(filtered);
+  }
+
+  function updateFilterChips(active) {
+    ['ALL','DATE','PARTY','AMOUNT','TERMINATION_CLAUSE'].forEach(type => {
+      const chip = document.getElementById(`chip-${type}`);
+      chip.className = 'filter-chip';
+      if (type === active) chip.classList.add(`active-${type}`);
+    });
+  }
+
+  function renderEntityList(entities) {
+    const list = document.getElementById('entityList');
+    if (!entities.length) {
+      list.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-3); font-size:13px;">No entities in this category.</div>`;
+      return;
+    }
+
+    list.innerHTML = entities.map((e, i) => {
+      const label     = LABELS[e.entity_type] || e.entity_type;
+      const pct       = Math.round((e.confidence || 0) * 100);
+      const fillClass = pct >= 80 ? '' : pct >= 60 ? 'medium' : 'low';
+      const display   = e.normalized_value && e.normalized_value !== e.value
+        ? `<div class="entity-normalized">↳ ${e.normalized_value}</div>`
+        : '';
+      const ctx = e.context
+        ? `<div class="entity-context">"…${e.context.trim()}…"</div>`
+        : '';
+      const validIcon = e.valid ? '✅' : '⚠️';
+
+      return `
+        <div class="entity-row ${e.entity_type}" style="animation-delay:${i * 30}ms">
+          <span class="entity-type-badge">${label}</span>
+          <div class="entity-content">
+            <div class="entity-value">${escapeHtml(e.value)}</div>
+            ${display}
+            ${ctx}
+          </div>
+          <div class="entity-meta">
+            <div>
+              <div class="confidence-bar">
+                <div class="confidence-fill ${fillClass}" style="width:${pct}%"></div>
+              </div>
+              <div class="confidence-pct">${pct}%</div>
+            </div>
+            <span class="valid-icon" title="${e.valid ? 'Valid' : 'Invalid'}">${validIcon}</span>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  /* ── Error ────────────────────────────────── */
+  function showError(msg) {
+    document.getElementById('loaderState').style.display  = 'none';
+    document.getElementById('resultsState').style.display = 'block';
+    const box = document.getElementById('errorBox');
+    box.style.display   = 'block';
+    box.textContent     = `⚠ ${msg}`;
+    document.getElementById('entityList').innerHTML = '';
+  }
+
+  /* ── Reset ────────────────────────────────── */
+  function resetResults() {
+    allEntities  = [];
+    activeFilter = 'ALL';
+    document.getElementById('resultsState').style.display = 'none';
+    document.getElementById('emptyState').style.display   = 'block';
+    document.getElementById('errorBox').style.display     = 'none';
+    ['DATE','PARTY','AMOUNT','TERMINATION_CLAUSE'].forEach(t => {
+      document.getElementById(`count-${t}`).textContent = '0';
+    });
+  }
+
+  /* ── Utils ────────────────────────────────── */
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Pre-fill sample text for easy demo
+  document.getElementById('contractText').value =
+`SERVICE AGREEMENT
+
+This Service Agreement ("Agreement") is entered into as of January 15, 2024, by and between Meridian Capital Partners LLC ("Company") and Alexandra Hartwell ("Contractor").
+
+1. COMPENSATION
+The Company shall pay $12,500.00 per month. Total contract value shall not exceed $150,000.00 USD. A milestone payment of $5,000.00 is due on April 30, 2024.
+
+2. TERM
+This Agreement commences March 1, 2024 and expires December 31, 2024.
+
+3. TERMINATION
+Either party may terminate this Agreement upon thirty (30) days written notice. The Company may terminate immediately upon written notice in the event of a material breach that remains uncured for ten (10) days following written notice of such breach.
+
+Signed by Robert Chen, CEO, Meridian Capital Partners LLC on January 15, 2024.`;
+</script>
+
+</body>
+</html>
